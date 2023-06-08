@@ -1,4 +1,6 @@
 import pandas as pd
+from matplotlib import pyplot as plt
+from pandas import DataFrame
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -6,10 +8,10 @@ from sklearn.ensemble import RandomForestClassifier
 
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-
+import seaborn as sns
 from preprocess import preprocess
 
 
@@ -65,7 +67,8 @@ def soft_svm_model():
         Fn = np.sum((y_pred != y_test.loc[preprocessed_X_test.index].to_numpy()) & (y_pred == 0))
         precision = Tp / (Tp + Fp)
         recall = Tp / ( (Tp + Fn))
-        F1 = 2 * (precision * recall) / (precision + recall)
+        # F1 = 2 * (precision * recall) / (precision + recall)
+        F1 = f1_score(y_test.loc[preprocessed_X_test.index], y_pred, average="macro")
         F1_arr.append(F1)
         accuracy_scores.append(accuracy)
         print("Accuracy:", accuracy)
@@ -82,7 +85,36 @@ def soft_svm_model():
     # Save the output DataFrame to a CSV file
     output_df.to_csv("agoda_cancellation_prediction.csv", index=False)
 
+
+def task3(df:  DataFrame):
+    cancellation_datetime = df.drop(columns=["cancellation_datetime"]).notnull().astype(int)
+    X, y = preprocess(df.drop(columns=["cancellation_datetime"]), df["cancellation_datetime"])
+    corr_arr = []
+    corr_col = []
+    for i, col in enumerate(X.columns):
+        corr = np.corrcoef(X[col], y)[0][1]
+        corr_arr.append((np.abs(corr), col))
+        print(corr)
+        corr_col.append(col)
+        print(col)
+    corr_arr = sorted(corr_arr, key=lambda x: x[0], reverse=True)
+    print(corr_arr)
+    # Bar plot of correlation coefficients
+    corr_values = [corr[0] for corr in corr_arr[1:10]]
+    feature_names = [corr[1] for corr in corr_arr[1:10]]
+    plt.figure(figsize=(8, 6))
+    plt.bar(range(1, 10), corr_values)
+    # plt.text(range(1, 10), corr_values,)
+    plt.xlabel("Features")
+    plt.ylabel("Absolute Correlation")
+    plt.title("Correlation Coefficients")
+    plt.xticks(rotation=90)
+    plt.savefig("correlation_plot.png")  # Save the figure as a PNG file
+    plt.show()
+
+
 if __name__ == '__main__':
     soft_svm_model()
+    df = pd.read_csv("Data/agoda_cancellation_train.csv")
+    # task3(df)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
