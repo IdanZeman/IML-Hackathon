@@ -112,7 +112,6 @@ def preprocess(X: DataFrame, y: DataFrame):
 
     X['time_reserve_before_checking'] = (X['checkin_date'] - X['booking_datetime']).dt.days
     X['num_of_day_to_stay'] = (X['checkout_date'] - X['checkin_date']).dt.days
-    # X['score'] = X.apply(lambda row: process_policy_func(row['cancellation_policy_code'], row['num_of_day_to_stay']), axis=1)
     X = X.drop(to_date_time, axis=1)
     X['charge_option'] = X['charge_option'].replace({'Pay Now': 1, 'Pay Later': 0, 'Pay at Check-in': 0})
     X['is_user_logged_in'] = X['is_user_logged_in'].astype(int)
@@ -125,55 +124,3 @@ def preprocess(X: DataFrame, y: DataFrame):
 def get_average(vec: np.ndarray):
     return np.nanmean(vec)
 
-
-def split_policy_code(s: str, total_day: int):
-    days = set()
-    if s == 'UNKNOWN':
-        return [(0, 0)], set()
-
-    splited_polcis = s.split('_')
-    res = []
-    for s in splited_polcis:
-        index_D = s.find('D')
-        num_days = int(s[:index_D])
-        days.add(num_days)
-        percent, percent_id = 0, s.find('P')
-        if percent_id != -1:
-            percent = int(s[index_D + 1:percent_id]) / PERCENTAGE_FACTOR
-        else:
-            percent_id = s.find('N')
-            percent = int(s[index_D + 1:percent_id]) / total_day
-        res.append((num_days, percent))
-
-    return res, days
-
-def process_policy_func(full_policy, stay_duration):
-    if full_policy == 'UNKNOWN': return 0
-    policy_lst = full_policy.split('_')
-    processed_lst = []
-    for policy in policy_lst:
-        policy_days_percentage = policy.split('D')
-        if len(policy_days_percentage) == 1:
-            policy_days_percentage = ['0', policy_days_percentage[0]]
-        policy_days_percentage[0] = int(policy_days_percentage[0]) + 1
-        if 'N' in policy_days_percentage[1]:
-            policy_days_percentage[1] = int(policy_days_percentage[1][:-1]) / stay_duration
-        else:
-            policy_days_percentage[1] = int(policy_days_percentage[1][:-1])
-        processed_lst.append(policy_days_percentage)
-
-    score = 0
-    for i in range(len(processed_lst)):
-        if processed_lst[i][0] > 60:
-            processed_lst[i][0] = 60
-    for i in range(len(processed_lst)):
-        if i < len(processed_lst) - 1:
-            score += (processed_lst[i][0] - processed_lst[i + 1][0]) * (processed_lst[i][1] / 100)
-        else:
-            score += processed_lst[i][0] * (processed_lst[i][1] / 100)
-    return score
-
-
-def process_policy(X):
-    X['metric'] = X.apply(lambda x: process_policy_func(x['cancellation_policy_code'], x['stay_duration']), axis=1)
-    return X

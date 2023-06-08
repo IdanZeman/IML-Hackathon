@@ -15,7 +15,7 @@ import seaborn as sns
 from preprocess import preprocess
 
 
-def soft_svm_model():
+def task1():
     # Assuming you have your features stored in X and labels in y
     # ###
     # c = ['hotel_live_date', 'accommadation_type_name', 'original_payment_method',
@@ -87,10 +87,13 @@ def soft_svm_model():
 
 
 def task3(df:  DataFrame):
-    cancellation_datetime = df.drop(columns=["cancellation_datetime"]).notnull().astype(int)
     X, y = preprocess(df.drop(columns=["cancellation_datetime"]), df["cancellation_datetime"])
     corr_arr = []
     corr_col = []
+    corr1 = np.corrcoef(X["hotel_star_rating"], X["original_selling_amount"])[0][1]
+    corr2 = np.corrcoef(X["num_of_day_to_stay"], X["time_reserve_before_checking"])[0][1]
+    corr3 = np.corrcoef(X["charge_option"], X["num_of_day_to_stay"])[0][1]
+
     for i, col in enumerate(X.columns):
         corr = np.corrcoef(X[col], y)[0][1]
         corr_arr.append((np.abs(corr), col))
@@ -99,22 +102,35 @@ def task3(df:  DataFrame):
         print(col)
     corr_arr = sorted(corr_arr, key=lambda x: x[0], reverse=True)
     print(corr_arr)
-    # Bar plot of correlation coefficients
-    corr_values = [corr[0] for corr in corr_arr[1:10]]
-    feature_names = [corr[1] for corr in corr_arr[1:10]]
-    plt.figure(figsize=(8, 6))
-    plt.bar(range(1, 10), corr_values)
-    # plt.text(range(1, 10), corr_values,)
-    plt.xlabel("Features")
-    plt.ylabel("Absolute Correlation")
+    feature_names = [corr1[1] for corr1 in corr_arr]
+    corr_values = [corr1[0] for corr1 in corr_arr]
+    plt.barh(feature_names, corr_values)
+    plt.xlabel("Absolute Correlation")
+    plt.ylabel("Features")
     plt.title("Correlation Coefficients")
-    plt.xticks(rotation=90)
+    plt.tight_layout()
     plt.savefig("correlation_plot.png")  # Save the figure as a PNG file
     plt.show()
 
+    y_deviatin = df["cancellation_datetime"].notnull().astype(int).std()
+
+    for feature in X.columns:
+        pearson_correlation = X[feature].cov(y) / (X[feature].std() * y_deviatin)
+        plt.figure()
+        plt.scatter(X[feature], y, color="black")
+        plt.title("Correlation between " + feature + " and response\nPearson Correlation: " + str(pearson_correlation))
+        plt.xlabel("Values of " + feature)
+        plt.ylabel("Values of response")
+        plt.savefig(feature + "_response_correlation.png")
+
+    plt.show()
+
+# def task4(df:  DataFrame):
+    
 
 if __name__ == '__main__':
-    soft_svm_model()
+    np.random.seed(0)
+    task1()
     df = pd.read_csv("Data/agoda_cancellation_train.csv")
-    # task3(df)
+    task3(df)
 
