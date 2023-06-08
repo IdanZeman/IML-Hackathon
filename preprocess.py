@@ -23,7 +23,7 @@ def preprocess_lines_training(df: DataFrame):
         df = df[df[c] > 0]
     for c in ["no_of_children", 'original_selling_amount', ]:
         df = df[df[c] >= 0]
-    df["hotel_star_rating"] = df["hotel_star_rating"].fillna(0).notnull().astype(float)
+    df["hotel_star_rating"] = df["hotel_star_rating"].fillna(0).astype(float)
     df = df[(df["hotel_star_rating"] < 6) & (df["hotel_star_rating"] >= 0)]
     return df
 
@@ -73,10 +73,6 @@ def preprocess_test(X_test: DataFrame):
     df['num_of_day_to_stay'] = (df['checkout_date'] - df['checkin_date']).dt.days
     df = df.drop(to_date_time, axis=1)
 
-    df = pd.get_dummies(df, prefix='in_country_', columns=['hotel_country_code'])
-    df = pd.get_dummies(df, prefix='cancellation_policy_', columns=['cancellation_policy_code'])
-
-    df = pd.get_dummies(df, prefix='payment_type_', columns=['original_payment_type'])
     df['charge_option'] = df['charge_option'].replace({'Pay Now': 1, 'Pay Later': 0, 'Pay at Check-in': 0})
     df['is_user_logged_in'] = df['is_user_logged_in'].astype(int)
     df['is_first_booking'] = df['is_first_booking'].astype(int)
@@ -101,9 +97,9 @@ def preprocess(X: DataFrame, y: DataFrame):
         X = X.drop(columns=['cancellation_datetime'])
     else:  # In test
         X = preprocess_lines_testing(X)
-    X = pd.get_dummies(X, prefix='in_country_', columns=['hotel_country_code'])
-    X = pd.get_dummies(X, prefix='cancellation_policy_', columns=['cancellation_policy_code'])
-    X = pd.get_dummies(X, prefix='payment_type_', columns=['original_payment_type'])
+    # X = pd.get_dummies(X, prefix='in_country_', columns=['hotel_country_code'])
+    # X = pd.get_dummies(X, prefix='cancellation_policy_', columns=['cancellation_policy_code'])
+    # X = pd.get_dummies(X, prefix='payment_type_', columns=['original_payment_type'])
     drop_for_now = ['guest_nationality_country_name', 'hotel_live_date', 'original_payment_method']
     to_drop = ['hotel_id', 'hotel_brand_code', 'hotel_city_code', 'hotel_chain_code', 'hotel_area_code',
                'request_nonesmoke',
@@ -114,14 +110,15 @@ def preprocess(X: DataFrame, y: DataFrame):
 
     X[to_date_time] = X[to_date_time].apply(pd.to_datetime)
 
-
-
     X['time_reserve_before_checking'] = (X['checkin_date'] - X['booking_datetime']).dt.days
     X['num_of_day_to_stay'] = (X['checkout_date'] - X['checkin_date']).dt.days
+    # X['score'] = X.apply(lambda row: process_policy_func(row['cancellation_policy_code'], row['num_of_day_to_stay']), axis=1)
     X = X.drop(to_date_time, axis=1)
     X['charge_option'] = X['charge_option'].replace({'Pay Now': 1, 'Pay Later': 0, 'Pay at Check-in': 0})
     X['is_user_logged_in'] = X['is_user_logged_in'].astype(int)
     X['is_first_booking'] = X['is_first_booking'].astype(int)
+    X = X.drop(columns=['hotel_country_code', 'cancellation_policy_code', 'original_payment_type'])
+
     return X, new_y
 
 
@@ -149,3 +146,34 @@ def split_policy_code(s: str, total_day: int):
         res.append((num_days, percent))
 
     return res, days
+
+def process_policy_func(full_policy, stay_duration):
+    if full_policy == 'UNKNOWN': return 0
+    policy_lst = full_policy.split('_')
+    processed_lst = []
+    for policy in policy_lst:
+        policy_days_percentage = policy.split('D')
+        if len(policy_days_percentage) == 1:
+            policy_days_percentage = ['0', policy_days_percentage[0]]
+        policy_days_percentage[0] = int(policy_days_percentage[0]) + 1
+        if 'N' in policy_days_percentage[1]:
+            policy_days_percentage[1] = int(policy_days_percentage[1][:-1]) / stay_duration
+        else:
+            policy_days_percentage[1] = int(policy_days_percentage[1][:-1])
+        processed_lst.append(policy_days_percentage)
+
+    score = 0
+    for i in range(len(processed_lst)):
+        if processed_lst[i][0] > 60:
+            processed_lst[i][0] = 60
+    for i in range(len(processed_lst)):
+        if i < len(processed_lst) - 1:
+            score += (processed_lst[i][0] - processed_lst[i + 1][0]) * (processed_lst[i][1] / 100)
+        else:
+            score += processed_lst[i][0] * (processed_lst[i][1] / 100)
+    return score
+
+
+def process_policy(X):
+    X['metric'] = X.apply(lambda x: process_policy_func(x['cancellation_policy_code'], x['stay_duration']), axis=1)
+    return X
