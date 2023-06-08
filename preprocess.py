@@ -38,7 +38,7 @@ def preprocess(filename: str):
                'original_payment_currency', 'language', 'origin_country_code', 'no_of_extra_bed',
                'customer_nationality', 'h_customer_id']
     df = pd.read_csv(filename)
-    df=preprocess_lines_training(df)
+    df = preprocess_lines_training(df)
     df = df.drop(to_drop + drop_for_now, axis=1)
 
     to_date_time = ['booking_datetime', 'checkin_date', 'checkout_date', 'cancellation_datetime']
@@ -52,7 +52,7 @@ def preprocess(filename: str):
     df = pd.get_dummies(df, prefix='in_country', columns=['hotel_country_code'])
     df['charge_option'] = df['charge_option'].replace({'Pay Now': 1, 'Pay Later': 0})
 
-    return df
+    return df, df['cancellation_datetime'].astype(int)
 
 
 df1 = preprocess('Data/agoda_cancellation_train.csv')
