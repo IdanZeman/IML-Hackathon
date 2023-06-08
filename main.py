@@ -15,12 +15,18 @@ def soft_svm_model():
     # X = X.drop(columns=c)
     # y = y.drop(columns=c)
     # ###
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.999,
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.99,
                                                         random_state=42)  # TODO: check random_state
     svm = SVC(kernel='linear', probability=True)
-    x = np.random.uniform(low=-5, high=5, size=(10, 2))
-    X, y = (x, np.array(x[:,0] < x[:,1], dtype=np.int))
-    svm.fit(X, y)
+    i =2
+    headers = X_train.columns
+    svm.fit(X_train.drop(columns=["h_booking_id"]).iloc[:, 1:9].to_numpy(), y_train.to_numpy())
+
+    while(i):
+        print(i)
+        print(headers[i])
+        svm.fit(X_train.drop(columns=["h_booking_id"]).iloc[:, 1:i].to_numpy(), y_train.to_numpy())
+        i+=1
     print("finish fit")
     y_pred = svm.predict(X_test)
     print(y_pred)

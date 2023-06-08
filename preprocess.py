@@ -59,7 +59,7 @@ def preprocess(filename: str):
     df =pd.get_dummies(df,prefix='cancellation_policy_', columns=['cancellation_policy_code'])
 
     df = pd.get_dummies(df, prefix='payment_type_', columns=['original_payment_type'])
-    df['charge_option'] = df['charge_option'].replace({'Pay Now': 1, 'Pay Later': 0})
+    df['charge_option'] = df['charge_option'].replace({'Pay Now': 1, 'Pay Later': 0, 'Pay at Check-in': 0})
     df['is_user_logged_in'] = df['is_user_logged_in'].astype(int)
     df['is_first_booking'] = df['is_first_booking'].astype(int)
 
