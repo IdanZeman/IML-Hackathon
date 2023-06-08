@@ -6,22 +6,22 @@ from pandas import DataFrame
 # Idan and Gal function
 def preprocess_lines_training(df: DataFrame):
     df = df.drop_duplicates()
-    df['cancellation_datetime'].drop()
-    for c in ['request_nonesmoke', 'request_latecheckin', 'request_highfloor', 'request_largebed', 'request_twinbeds',
-              'request_airport', 'request_earlycheckin']:
-        df[c] = df[c].fillna(0)
-        df = df[2 > df[c] >= 0]
-        df[c] = df[c].astype(int)
-
-    df['hotel_brand_code'] = df['hotel_brand_code'].fillna('No brand')
-    df.dropna()
+    # df['cancellation_datetime'].drop()
+    # for c in ['request_nonesmoke', 'request_latecheckin', 'request_highfloor', 'request_largebed', 'request_twinbeds',
+    #           'request_airport', 'request_earlycheckin']:
+    #     df[c] = df[c].fillna(0)
+    #     df = df[2 > df[c] >= 0]
+    #     df[c] = df[c].astype(int)
+    #
+    # df['hotel_brand_code'] = df['hotel_brand_code'].fillna('No brand')
+    # df.dropna()
 
     for c in ["no_of_adults", 'no_of_room', ]:
         df = df[df[c] > 0]
     for c in ["no_of_children", 'original_selling_amount', ]:
         df = df[df[c] >= 0]
-
-    df = df[6 > df["hotel_star_rating"] >= 0]
+    df["hotel_star_rating"].fillna(0).notnull().astype(float)
+    df = df[(df["hotel_star_rating"] < 6) & (df["hotel_star_rating"] >= 0)]
     return df
 
 
@@ -41,7 +41,8 @@ def preprocess(filename: str):
     df = preprocess_lines_training(df)
     df = df.drop(to_drop + drop_for_now, axis=1)
 
-    to_date_time = ['booking_datetime', 'checkin_date', 'checkout_date', 'cancellation_datetime']
+    to_date_time = ['booking_datetime', 'checkin_date', 'checkout_date','cancellation_datetime']
+    y = df['cancellation_datetime'].notnull().astype(int)
     df[to_date_time] = df[to_date_time].apply(pd.to_datetime)
 
     df['time_reserve_before_checking'] = (df['checkin_date'] - df['booking_datetime']).dt.days
@@ -52,8 +53,8 @@ def preprocess(filename: str):
     df = pd.get_dummies(df, prefix='in_country', columns=['hotel_country_code'])
     df['charge_option'] = df['charge_option'].replace({'Pay Now': 1, 'Pay Later': 0})
 
-    return df, df['cancellation_datetime'].astype(int)
+    return df, y
 
 
-df1 = preprocess('Data/agoda_cancellation_train.csv')
+df1,y = preprocess('Data/agoda_cancellation_train.csv')
 print(df1.head(n=1).to_csv('check.csv', index=False))
