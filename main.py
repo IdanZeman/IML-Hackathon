@@ -1,16 +1,23 @@
-# This is a sample Python script.
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+from preprocess import preprocess
 
 
-# Press the green button in the gutter to run the script.
+def soft_svm_model():
+    # Assuming you have your features stored in X and labels in y
+    X, y = preprocess(filename="Data/agoda_cancellation_train.csv")
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25,
+                                                        random_state=42)  # TODO: check random_state
+    svm = SVC(C=1.0, kernel='linear')
+    svm.fit(X_train, y_train)
+    y_pred = svm.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print("Accuracy:", accuracy)
+
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    soft_svm_model()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
