@@ -20,7 +20,10 @@ def soft_svm_model():
     svm = SVC(kernel='linear', probability=True)
     i =2
     headers = X_train.columns
-    svm.fit(X_train.drop(columns=["h_booking_id"]).iloc[:, 1:9].to_numpy(), y_train.to_numpy())
+    for i in range(2, 500):
+        for j in range(1, 500):
+            print(i, j)
+            svm.fit(X_train.drop(columns=["h_booking_id"]).iloc[0:j+1, 1:i+1].to_numpy(), y_train.to_numpy())
 
     while(i):
         print(i)
