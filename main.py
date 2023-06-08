@@ -126,7 +126,7 @@ def task3(df:  DataFrame):
     plt.show()
 
 # def task4(df:  DataFrame):
-    
+
 
 if __name__ == '__main__':
     np.random.seed(0)
