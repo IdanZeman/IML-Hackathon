@@ -37,7 +37,8 @@ def preprocess(filename: str):
     to_drop = ['hotel_chain_code', 'hotel_area_code', 'hotel_brand_code', 'request_nonesmoke',
                'original_payment_currency', 'language', 'origin_country_code', 'no_of_extra_bed',
                'customer_nationality', 'h_customer_id']
-    df = pd.read_csv(filename).drop_duplicates()
+    df = pd.read_csv(filename)
+    df=preprocess_lines_training(df)
     df = df.drop(to_drop + drop_for_now, axis=1)
 
     to_date_time = ['booking_datetime', 'checkin_date', 'checkout_date', 'cancellation_datetime']
