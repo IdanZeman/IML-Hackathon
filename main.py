@@ -40,34 +40,44 @@ def soft_svm_model():
                                                         random_state=42)  # TODO: check random_state
     y_test = y_test.notnull().astype(int)
 
-    (preprocessed_X_train, preprocessed_y_train), (preprocessed_X_test, preprocessed_y_test) =\
+    (preprocessed_X_train, preprocessed_y_train), (preprocessed_X_test, preprocessed_y_test) = \
         preprocess(X_train.drop(columns=["h_booking_id"]), y_train), preprocess(X_test.drop(columns=["h_booking_id"]), None)
-    all_dummis = set(preprocessed_X_train.columns).union(preprocessed_X_test.columns)
-    preprocessed_X_train = preprocessed_X_train.reindex(columns=all_dummis, fill_value=0)
-    preprocessed_X_test = preprocessed_X_test.reindex(columns=all_dummis, fill_value=0)
+    # all_dummis = set(preprocessed_X_train.columns).union(preprocessed_X_test.columns)
+    # preprocessed_X_train = preprocessed_X_train.reindex(columns=all_dummis, fill_value=0)
+    # preprocessed_X_test = preprocessed_X_test.reindex(columns=all_dummis, fill_value=0)
 
-    X_agoda_test = pd.read_csv("Data/Agoda_Test_1.csv")
-    preprocessed_X_agoda_test, _ = preprocess(X_agoda_test.drop(columns=["h_booking_id"]), None)
-    preprocessed_X_agoda_test = preprocessed_X_agoda_test.reindex(columns=all_dummis, fill_value=0)
+
     y_pred_arr = []
     accuracy_scores = []
+    F1_arr = []
+    common_columns = preprocessed_X_train.columns.intersection(preprocessed_X_test.columns).tolist()
+    # Add missing columns from preprocessed_X_train to preprocessed_X_test
+    missing_columns = preprocessed_X_train.columns.difference(preprocessed_X_test.columns).tolist()
+    preprocessed_X_test = preprocessed_X_test.reindex(columns=common_columns+missing_columns, fill_value=0)
     for i, model in enumerate(models):
         model.fit(preprocessed_X_train.to_numpy(), preprocessed_y_train.to_numpy())
         print("Model - " + model_names[i]+": ")
         y_pred = model.predict(preprocessed_X_test.to_numpy())
         y_pred_arr.append(y_pred)
         accuracy = accuracy_score(y_test.loc[preprocessed_X_test.index], y_pred)
-        Tp = np.sum[y_pred == y_test.loc[preprocessed_X_test.index]]
-        Fp = np.sum[y_pred != y_test.loc[preprocessed_X_test.index] and y_pred == 1]
-        Fn = np.sum[y_pred != y_test.loc[preprocessed_X_test.index] and y_pred == 0]
-        precision = Tp / (Tp +Fp)
+        Tp = np.sum(y_pred == y_test.loc[preprocessed_X_test.index].to_numpy())
+        Fp = np.sum((y_pred != y_test.loc[preprocessed_X_test.index].to_numpy()) & (y_pred == 1))
+        Fn = np.sum((y_pred != y_test.loc[preprocessed_X_test.index].to_numpy()) & (y_pred == 0))
+        precision = Tp / (Tp + Fp)
         recall = Tp / ( (Tp + Fn))
+        F1 = 2 * (precision * recall) / (precision + recall)
+        F1_arr.append(F1)
         accuracy_scores.append(accuracy)
         print("Accuracy:", accuracy)
-    max_index = np.argmax(accuracy_scores)
+        print("F1:", F1)
+    X_agoda_test = pd.read_csv("Data/Agoda_Test_1.csv")
+    preprocessed_X_agoda_test, _ = preprocess(X_agoda_test.drop(columns=["h_booking_id"]), None)
+    preprocessed_X_agoda_test = preprocessed_X_agoda_test.reindex(columns=common_columns+missing_columns, fill_value=0)
+    max_index = np.argmax(F1_arr)
     y_pred_agoda = models[max_index].predict(preprocessed_X_agoda_test.to_numpy())
     # Create the output DataFrame with id and cancellation columns
-    output_df = pd.DataFrame({"id": X_agoda_test.loc[preprocessed_X_agoda_test.index]['h_booking_id'], "cancellation": y_pred_agoda[max_index]})
+    output_df = pd.DataFrame({"id": X_agoda_test.loc[preprocessed_X_agoda_test.index]['h_booking_id'],
+                              "cancellation": y_pred_agoda})
 
     # Save the output DataFrame to a CSV file
     output_df.to_csv("agoda_cancellation_prediction.csv", index=False)
